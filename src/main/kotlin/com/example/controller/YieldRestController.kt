@@ -15,7 +15,7 @@ class YieldRestController(
 ) : YieldAggregatorApiDelegate {
     override suspend fun getYieldSearchResponse(
         blockchains: List<ApiSupportedBlockchain>?,
-        providers: List<ApiSupportedDex>?,
+        providers: List<ApiSupportedYields>?,
         trusted: Boolean?,
         withActiveBoosts: Boolean?,
         recentlyCreated: Boolean?,

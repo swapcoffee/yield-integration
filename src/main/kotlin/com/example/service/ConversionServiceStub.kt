@@ -3,9 +3,9 @@ package com.example.service
 import ru.tinkoff.kora.common.Component
 import java.math.BigInteger
 
-// This is method definitions, not a real implementation
 @Component
-class ConversionService {
+// This is internal service, which calculates USD amount from token amount
+class ConversionServiceStub {
 
     fun getUsdAmount(token: String, amount: Double): Double {
         return amount * 1.0

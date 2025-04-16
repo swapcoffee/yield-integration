@@ -1,5 +1,4 @@
 import org.openapitools.generator.gradle.plugin.tasks.GenerateTask
-import java.nio.file.Files
 
 plugins {
     kotlin("jvm") version ("1.9.10")
@@ -33,14 +32,10 @@ configurations {
 group = "com.example"
 version = "1.0-SNAPSHOT"
 
-//val projectBuildDir = rootDir.resolve("build/${project.name}")
-//Files.createDirectories(projectBuildDir.toPath())
-//layout.buildDirectory.set(projectBuildDir)
-
 val generateSelfRest = tasks.register<GenerateTask>("GenerateSelfRest") {
     generatorName = "kora"
     group = "openapi tools"
-    inputSpec = "$projectDir/src/main/resources/openapi/swap-spec.yaml"
+    inputSpec = "$projectDir/src/main/resources/openapi/yield-spec.yaml"
     outputDir = "$buildDir/generated/openapi/main/kotlin"
     packageName = "com.example.api"
     apiPackage = "com.example.api.controller"

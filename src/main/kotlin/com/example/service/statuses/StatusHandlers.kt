@@ -13,6 +13,9 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo
     JsonSubTypes.Type(value = StatusHandlerOnReceive::class),
     JsonSubTypes.Type(value = StatusHandlerOnEmptyOutputEvents::class),
 )
+/**
+ * resolveAsSuccess -- is a flag which tels how to resolve handler if isApplicable returns true.
+ */
 abstract class StatusHandler(val resolveAsSuccess: Boolean) {
 
     abstract fun isApplicable(input: BlockchainRecordParser.Input): Boolean

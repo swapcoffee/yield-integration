@@ -7,7 +7,7 @@ import com.example.dto.yield.YieldTradingStatistics
 import com.example.loader.LoadedData
 import com.example.loader.LoaderService
 import com.example.repository.PoolsRepository
-import com.example.service.ConversionService
+import com.example.service.ConversionServiceStub
 import com.example.service.YieldBoostsService
 import com.example.service.YieldTradingStatisticsService
 import com.example.utils.ObjectMappers
@@ -31,7 +31,7 @@ class StonfiV1LoaderService(
     private val httpClient: AsyncHttpClient,
     private val repository: PoolsRepository,
     private val tonlib: Tonlib,
-    private val conversionService: ConversionService
+    private val conversionService: ConversionServiceStub
 ) : LoaderService {
 
     companion object {

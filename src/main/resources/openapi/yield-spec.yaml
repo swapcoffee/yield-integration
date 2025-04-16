@@ -30,7 +30,7 @@ paths:
           schema:
             type: array
             items:
-              $ref: '#/components/schemas/ApiSupportedDex'
+              $ref: '#/components/schemas/ApiSupportedYields'
         - name: trusted
           in: query
           required: false
@@ -478,12 +478,8 @@ components:
     ApiDexPoolLiquidityWithdrawalRequest:
       type: object
       required:
-        - user_address
         - lp_amount
       properties:
-        user_address:
-          type: string
-          example: UQCNTO0Nh0Z7QNyRW1BLWfk08f2dAOw4izrx9sO6OUPg4DoV
         lp_amount:
           type: string
           description: Absolute value
@@ -540,7 +536,8 @@ components:
       type: string
       enum:
         - ton
-    ApiSupportedDex:
+    # TODO: add your protocol here:
+    ApiSupportedYields:
       type: string
       enum:
         - stonfi
@@ -683,7 +680,7 @@ components:
         pool_statistics:
           $ref: '#/components/schemas/ApiPoolStatistics'
         pool:
-          # TODO: extend this object with ApiYieldDetails_<Type>
+          # TODO: extend this object with ApiYieldDetails_<Type>, don't forget to update discriminator
           oneOf:
             - $ref: '#/components/schemas/ApiYieldDetails_Dex'
           discriminator:
@@ -716,7 +713,7 @@ components:
         - pool
       properties:
         pool:
-          # TODO: extend this object with ApiYieldUserDetails_<Type>
+          # TODO: extend this object with ApiYieldUserDetails_<Type>, don't forget to update discriminator
           oneOf:
             - $ref: '#/components/schemas/ApiYieldUserDetails_Dex'
           discriminator:
@@ -740,7 +737,7 @@ components:
         - request_data
       properties:
         request_data:
-          # TODO: extend this object with ApiYieldInteractionRequest_<Type>
+          # TODO: extend this object with ApiYieldInteractionRequest_<Type>, don't forget to update discriminator
           oneOf:
             - $ref: '#/components/schemas/ApiDexPoolLiquidityProvisioningRequest'
             - $ref: '#/components/schemas/ApiDexPoolLiquidityWithdrawalRequest'

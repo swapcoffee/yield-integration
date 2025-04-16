@@ -1,6 +1,6 @@
 package com.example.dto.yield
 
-import com.example.api.model.ApiSupportedDex
+import com.example.api.model.ApiSupportedYields
 
 // TODO: add your protocol here
 enum class YieldProtocols(val value: String) {
@@ -18,16 +18,16 @@ enum class YieldProtocols(val value: String) {
     }
 }
 
-fun YieldProtocols.mapToApi(): ApiSupportedDex {
+fun YieldProtocols.mapToApi(): ApiSupportedYields {
     when (this) {
-        YieldProtocols.STONFI_V1 -> return ApiSupportedDex.STONFI
+        YieldProtocols.STONFI_V1 -> return ApiSupportedYields.STONFI
         else -> throw IllegalArgumentException("Unsupported Yield Protocol: $this")
     }
 }
 
-fun ApiSupportedDex.mapToYieldProtocols(): YieldProtocols {
+fun ApiSupportedYields.mapToYieldProtocols(): YieldProtocols {
     when (this) {
-        ApiSupportedDex.STONFI -> return YieldProtocols.STONFI_V1
+        ApiSupportedYields.STONFI -> return YieldProtocols.STONFI_V1
         else -> throw IllegalArgumentException("Unsupported Yield Protocol: $this")
     }
 }

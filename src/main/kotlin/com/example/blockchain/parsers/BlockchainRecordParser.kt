@@ -1,6 +1,7 @@
 package com.example.blockchain.parsers
 
 import com.example.blockchain.TxContext
+import com.example.blockchain.records.BlockchainRecord
 import org.ton.java.cell.CellSlice
 import org.ton.java.tonlib.types.RawMessage
 import org.ton.java.tonlib.types.RawTransaction
@@ -19,6 +20,6 @@ interface BlockchainRecordParser {
 
     fun isBelongsTo(context: TxContext, input: Input): Boolean
 
-    suspend fun parse(context: TxContext, input: Input): List<com.example.blockchain.records.BlockchainRecord>
+    suspend fun parse(context: TxContext, input: Input): List<BlockchainRecord>
 
 }

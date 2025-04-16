@@ -9,7 +9,7 @@ import com.example.dto.db.LiquidityPool
 import com.example.dto.db.PoolStatsTradingVolume
 import com.example.dto.yield.YieldPoolFieldsDex
 import com.example.dto.yield.YieldProtocols
-import com.example.service.ConversionService
+import com.example.service.ConversionServiceStub
 import com.example.utils.ObjectMappers
 import com.example.utils.dateToLong
 import org.ton.java.address.Address
@@ -23,7 +23,7 @@ import java.time.LocalDateTime
 @Component
 class StonfiV1Parser(
     private val tonlib: Tonlib,
-    private val conversionService: ConversionService
+    private val conversionService: ConversionServiceStub
 ) : BlockchainRecordParser {
 
     private companion object {

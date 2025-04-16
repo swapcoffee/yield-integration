@@ -2,8 +2,7 @@ package com.example.protocols.stonfi
 
 import com.example.api.model.ApiTransactionBoc
 import com.example.api.model.ApiTransactionResponse
-import com.example.repository.PoolsRepository
-import com.example.service.ConversionService
+import com.example.service.ConversionServiceStub
 import com.example.service.statuses.StatusHandlerOnReceive
 import com.example.service.statuses.StatusObserverServiceStub
 import com.example.service.statuses.StatusServiceStub
@@ -23,9 +22,8 @@ import java.util.ArrayDeque
 
 class StonfiV1Service(
     private val httpClient: AsyncHttpClient,
-    private val repository: PoolsRepository,
     private val tonlib: Tonlib,
-    private val conversionService: ConversionService,
+    private val conversionService: ConversionServiceStub,
     private val statusServiceStub: StatusServiceStub,
     private val statusObserverServiceStub: StatusObserverServiceStub,
 ) {
