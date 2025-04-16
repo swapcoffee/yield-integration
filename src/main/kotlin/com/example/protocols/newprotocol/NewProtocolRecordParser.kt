@@ -25,7 +25,7 @@ class NewProtocolRecordParser(
         //  The method could use a pattern like: input.tx.address.accountAddress === "your-fabric-address"
         //  Or, it could check the opcode: input.opcode === CREATE_POOL
         //  Alternatively, it could use any other validation logic you see fit.
-        TODO()
+        return false
     }
 
     override suspend fun parse(context: TxContext, input: BlockchainRecordParser.Input): List<BlockchainRecord> {
