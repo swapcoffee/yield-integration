@@ -1,0 +1,10 @@
+databaseChangeLog:
+  - changeSet:
+      id: init
+      author: example
+      changes:
+        - tagDatabase:
+            tag: init
+  - include:
+      file: v1_tables.sql
+      relativeToChangelogFile: true

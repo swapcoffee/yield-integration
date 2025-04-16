@@ -1,0 +1,755 @@
+openapi: 3.0.3
+info:
+  title: Example API
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080/
+tags:
+  - name: YieldAggregator
+    description: Yield aggregator functionality. Provides and handles routes to pools with the best yield.
+
+paths:
+  /v1/yield/pools:
+    get:
+      tags: [ YieldAggregator ]
+      summary: Returns list of pools which correspond to the given params
+      operationId: getYieldSearchResponse
+      parameters:
+        - name: blockchains
+          in: query
+          required: false
+          description: If set, only pools from given blockchains will be returned
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/ApiSupportedBlockchain'
+        - name: providers
+          in: query
+          required: false
+          description: If set, only pools from given pool providers will be returned
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/ApiSupportedDex'
+        - name: trusted
+          in: query
+          required: false
+          description: Returns only those pools which are trusted by DEXes or community
+          schema:
+            type: boolean
+            default: true
+        - name: with_active_boosts
+          in: query
+          required: false
+          description: Returns only pools which have active boosts
+          schema:
+            type: boolean
+            default: false
+        - name: recently_created
+          in: query
+          required: false
+          description: Returns only pools created within last 24 hours
+          schema:
+            type: boolean
+            default: false
+        - name: with_liquidity_from
+          in: query
+          required: false
+          description: If set, returns only pools in which liquidity has been partially provisioned by the given address
+          schema:
+            type: string
+        - name: search_text
+          in: query
+          required: false
+          description: If set, look for given (sub-)text within pool's address, token tickers and addresses
+          schema:
+            type: string
+        - name: order
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/ApiPoolSortOrder'
+        - name: descending_order
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: true
+        - name: in_groups
+          in: query
+          required: false
+          description: If set, groups pools by liquidity providers, then handles and returns each group separately
+          schema:
+            type: boolean
+            default: false
+        - $ref: '#/components/parameters/querySize10'
+        - $ref: '#/components/parameters/queryPage'
+      responses:
+        '200':
+          description: List of corresponding pools
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ApiYieldSearchResponse'
+        'default':
+          $ref: '#/components/responses/ApiError'
+  /v1/yield/pool/{pool_address}:
+    get:
+      tags: [ YieldAggregator ]
+      summary: Returns detailed information about requested pool
+      operationId: getYieldDetails
+      parameters:
+        - name: pool_address
+          in: path
+          required: true
+          description: Pool address
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Detailed information about requested pool, with incentives and so on
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiYieldDetails'
+        'default':
+          $ref: '#/components/responses/ApiError'
+  /v1/yield/pool/{pool_address}/{user_address}:
+    get:
+      tags: [ YieldAggregator ]
+      summary: Returns detailed information about user's position in the pool
+      operationId: getYieldUserDetails
+      parameters:
+        - name: pool_address
+          in: path
+          required: true
+          description: Pool address
+          schema:
+            type: string
+        - name: user_address
+          in: path
+          required: true
+          description: User address
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Detailed information about user's position in requested pool, with incentives and so on
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiYieldUserDetails'
+        'default':
+          $ref: '#/components/responses/ApiError'
+    post:
+      tags: [ YieldAggregator ]
+      summary: Interact with yield pool
+      operationId: interactYieldPoolUser
+      parameters:
+        - name: pool_address
+          in: path
+          required: true
+          description: Pool address
+          schema:
+            type: string
+        - name: user_address
+          in: path
+          required: true
+          description: User address
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApiYieldInteractionRequest'
+      responses:
+        '200':
+          description: Transaction to be sent
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ApiTransactionResponse'
+        'default':
+          $ref: '#/components/responses/ApiError'
+  /v1/yield/result:
+    get:
+      tags: [ YieldAggregator ]
+      summary: Returns status of interaction with yield pool operation
+      operationId: getYieldPoolInteractionStatus
+      parameters:
+        - name: query_id
+          in: query
+          required: true
+          schema:
+            type: array
+            items:
+              type: string
+      responses:
+        '200':
+          description: Operation status
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ApiTxOperationStatus'
+        'default':
+          $ref: '#/components/responses/ApiError'
+components:
+  securitySchemes:
+    ApiKey:
+      type: apiKey
+      name: X-Api-Key
+      in: header
+  parameters:
+    queryPage:
+      in: query
+      name: page
+      schema:
+        type: integer
+        format: int32
+        minimum: 1
+        default: 1
+    querySize10:
+      in: query
+      name: size
+      schema:
+        type: integer
+        format: int32
+        minimum: 1
+        maximum: 100
+        default: 10
+    querySize100:
+      in: query
+      name: size
+      schema:
+        type: integer
+        format: int32
+        minimum: 1
+        maximum: 100
+        default: 100
+  responses:
+    ApiError:
+      description: Some error during request processing
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - error
+            properties:
+              error:
+                type: string
+  schemas:
+    ApiError:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          example: error description
+    ApiBlockchain:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          example: ton
+    ApiTokenAddress:
+      type: object
+      required:
+        - blockchain
+        - address
+      properties:
+        blockchain:
+          type: string
+          example: ton
+        address:
+          type: string
+          example: native
+    ApiTokenMetadata:
+      type: object
+      required:
+        - name
+        - symbol
+        - decimals
+        - listed
+      properties:
+        name:
+          type: string
+          example: ARBUZ
+        symbol:
+          type: string
+          example: ARBUZ
+        decimals:
+          type: integer
+          format: int32
+        image_url:
+          type: string
+        listed:
+          type: boolean
+    ApiToken:
+      type: object
+      required:
+        - address
+        - metadata
+      properties:
+        address:
+          $ref: '#/components/schemas/ApiTokenAddress'
+        metadata:
+          $ref: '#/components/schemas/ApiTokenMetadata'
+    ApiAmmType:
+      type: string
+      enum:
+        - constant_product
+        - cubic_stable
+        - curve_fi_stable
+        - concentrated_v3
+        - tonstakers
+    ApiPoolFees:
+      type: object
+      required:
+        - average_gas
+      properties:
+        average_gas:
+          type: number
+          format: double
+        divider:
+          type: integer
+          format: int32
+        input:
+          type: integer
+          format: int32
+        output:
+          type: integer
+          format: int32
+        first_token:
+          type: integer
+          format: int32
+        second_token:
+          type: integer
+          format: int32
+    ApiPoolReserves:
+      type: array
+      items:
+        type: number
+        format: double
+    ApiTokenRestrictions:
+      type: object
+      properties:
+        min_swap_amount:
+          type: number
+          format: double
+        max_swap_amount:
+          type: number
+          format: double
+    ApiPoolType:
+      type: string
+      enum:
+        - public
+        - private
+        - slumbering
+        - invalid
+
+    ApiPool:
+      type: object
+      required:
+        - dex
+        - address
+        - type
+        - amm_type
+        - tokens
+        - reserves
+        - fees
+      properties:
+        dex:
+          type: string
+          example: stonfi
+        address:
+          type: string
+        type:
+          $ref: '#/components/schemas/ApiPoolType'
+        amm_type:
+          $ref: '#/components/schemas/ApiAmmType'
+        amm_settings:
+          $ref: '#/components/schemas/ApiJson'
+        tokens:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApiToken'
+        reserves:
+          $ref: '#/components/schemas/ApiPoolReserves'
+        restrictions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApiTokenRestrictions'
+        fees:
+          $ref: '#/components/schemas/ApiPoolFees'
+        unavailable_until:
+          type: integer
+          format: int64
+          description: UTC unix timestamp in seconds
+    ApiTransactionBoc:
+      type: object
+      required:
+        - payload_cell
+        - address
+        - value
+      properties:
+        payload_cell:
+          type: string
+          format: base64
+          description: Base64-encoded cell. Treated as a payload field in TonConnect transaction.
+        address:
+          type: string
+          example: EQCM3B12QK1e4yZSf8GtBRT0aLMNyEsBc_DhVfRRtOEffLez
+        value:
+          type: string
+          format: int128
+          description: Amount of nanotons to be sent. Can be passed to TonConnect transaction.
+        state_init:
+          type: string
+          format: base64
+          description: Base64-encoded cell. Treated as a stateInit field in TonConnect transaction.
+
+
+    ApiTransactionResponse:
+      type: object
+      required:
+        - query_id
+        - message
+      properties:
+        query_id:
+          type: string
+        message:
+          $ref: '#/components/schemas/ApiTransactionBoc'
+
+
+    ApiJson:
+      type: object
+      additionalProperties: { }
+
+
+    ApiDexPoolLiquidityProvisioningReservesRatioCondition:
+      type: object
+      required:
+        - denominator
+        - min_nominator
+        - max_nominator
+      properties:
+        denominator:
+          type: integer
+          format: int32
+        min_nominator:
+          type: integer
+          format: int32
+        max_nominator:
+          type: integer
+          format: int32
+    ApiDexPoolLiquidityProvisioningRequest:
+      type: object
+      required:
+        - user_wallet
+        - asset_1_amount
+        - asset_2_amount
+      properties:
+        user_wallet:
+          type: string
+          example: UQCNTO0Nh0Z7QNyRW1BLWfk08f2dAOw4izrx9sO6OUPg4DoV
+        asset_1_amount:
+          type: string
+          description: Absolute value
+        asset_2_amount:
+          type: string
+          description: Absolute value
+        min_lp_amount:
+          type: string
+          description: Absolute value
+        reserves_ratio_condition:
+          $ref: '#/components/schemas/ApiDexPoolLiquidityProvisioningReservesRatioCondition'
+    ApiDexPoolLiquidityWithdrawalRequest:
+      type: object
+      required:
+        - user_address
+        - lp_amount
+      properties:
+        user_address:
+          type: string
+          example: UQCNTO0Nh0Z7QNyRW1BLWfk08f2dAOw4izrx9sO6OUPg4DoV
+        lp_amount:
+          type: string
+          description: Absolute value
+
+
+    ApiBoost:
+      type: object
+      required:
+        - pool_address
+        - reward_token
+        - reward_rate_per_second
+        - finish_seconds_unix
+        - rewards_per_day_usd
+        - apr
+      properties:
+        pool_address:
+          type: string
+        boost_factory:
+          type: string
+        boost_id:
+          type: integer
+          format: int64
+        reward_token:
+          $ref: '#/components/schemas/ApiToken'
+        reward_rate_per_second:
+          type: string
+        start_seconds_unix:
+          type: integer
+          format: int64
+        finish_seconds_unix:
+          type: integer
+          format: int64
+        rewards_per_day_usd:
+          type: number
+        apr:
+          type: number
+          description: Apr in percents
+        lock_duration_seconds:
+          type: integer
+          format: int64
+    ApiTxOperationStatus:
+      type: string
+      enum:
+        - pending
+        - succeeded
+        - failed
+    ApiClaimingType:
+      type: string
+      enum:
+        - rewards_stonfi
+        - rewards_dedust
+        - boost
+    ApiSupportedBlockchain:
+      type: string
+      enum:
+        - ton
+    ApiSupportedDex:
+      type: string
+      enum:
+        - stonfi
+        - dedust
+        - stonfi_v2
+        - coffee
+        - tonco
+        - tonstakers
+    ApiPoolStatistics:
+      type: object
+      required:
+        - tvl_usd
+        - volume_usd
+        - fee_usd
+        - apr
+        - lp_apr
+        - boost_apr
+      properties:
+        tvl_usd:
+          type: number
+          format: double
+        volume_usd:
+          type: number
+          format: double
+        fee_usd:
+          type: number
+          format: double
+        apr:
+          type: number
+          format: double
+        lp_apr:
+          type: number
+          format: double
+        boost_apr:
+          type: number
+          format: double
+
+    ApiPoolSortOrder:
+      type: string
+      enum:
+        - tvl
+        - volume
+        - apr
+    ApiStonfiFarmRequest:
+      type: object
+      required:
+        - lp_amount
+        - minter_address
+      properties:
+        lp_amount:
+          type: string
+        minter_address:
+          type: string
+    ApiClaimingTokenStats:
+      type: object
+      required:
+        - token
+        - wallet
+        - type
+        - claimed
+        - locked
+        - available
+        - available_usd
+      properties:
+        token:
+          $ref: '#/components/schemas/ApiToken'
+        wallet:
+          type: string
+          description: Wallet's address where token resides
+        type:
+          $ref: '#/components/schemas/ApiClaimingType'
+        claimed:
+          type: string
+          format: int128
+        locked:
+          type: string
+          format: int128
+        available:
+          type: string
+          format: int128
+        available_usd:
+          type: number
+          format: double
+
+
+    # TODO: Add new object, ApiYieldSearch_<Type> here
+    ApiYieldSearchWrapper:
+      type: object
+      required:
+        - pool_statistics
+        - pool
+      properties:
+        pool_statistics:
+          $ref: '#/components/schemas/ApiPoolStatistics'
+        pool:
+          # TODO: extend this object with ApiYieldSearch_<Type>
+          oneOf:
+            - $ref: '#/components/schemas/ApiPool'
+          discriminator:
+            propertyName: 'yieldTypeResolver'
+            mapping:
+              dex_pool: '#/components/schemas/ApiPool'
+    ApiYieldSearchResponse:
+      type: object
+      required:
+        - pools
+        - total_count
+      properties:
+        total_count:
+          type: integer
+          format: int32
+        pools:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApiYieldSearchWrapper'
+
+    # TODO: Add new object, ApiYieldDetails_<Type> here
+    ApiYieldDetails_Dex:
+      type: object
+      required:
+        - pool
+        - boosts
+        - total_supply
+      properties:
+        pool:
+          $ref: '#/components/schemas/ApiPool'
+        boosts:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApiBoost'
+        total_supply:
+          type: string
+          description: Absolute value of total minted LP for this pool
+    ApiYieldDetails:
+      type: object
+      required:
+        - pool_statistics
+        - pool
+      properties:
+        pool_statistics:
+          $ref: '#/components/schemas/ApiPoolStatistics'
+        pool:
+          # TODO: extend this object with ApiYieldDetails_<Type>
+          oneOf:
+            - $ref: '#/components/schemas/ApiYieldDetails_Dex'
+          discriminator:
+            propertyName: 'yieldTypeResolver'
+            mapping:
+              dex_pool: '#/components/schemas/ApiYieldDetails_Dex'
+
+    # TODO: Add new object, ApiYieldUserDetails_<Type> here
+    ApiYieldUserDetails_Dex:
+      type: object
+      required:
+        - user_lp_amount
+        - user_lp_wallet
+        - boosts
+      properties:
+        user_lp_amount:
+          type: string
+          description: Absolute value, user's LP amount
+        user_lp_wallet:
+          type: string
+          description: User's jetton wallet, where LP tokens are stored
+        boosts:
+          description: Available boosts to claim
+          type: array
+          items:
+            $ref: '#/components/schemas/ApiClaimingTokenStats'
+    ApiYieldUserDetails:
+      type: object
+      required:
+        - pool
+      properties:
+        pool:
+          # TODO: extend this object with ApiYieldUserDetails_<Type>
+          oneOf:
+            - $ref: '#/components/schemas/ApiYieldUserDetails_Dex'
+          discriminator:
+            propertyName: 'yieldTypeResolver'
+            mapping:
+              dex_pool: '#/components/schemas/ApiYieldUserDetails_Dex'
+
+    # TODO: Add new object, ApiYieldInteractionRequest_<Type> here
+    ApiYieldInteractionRequest_DexStonfiWithdrawFromStaking:
+      type: object
+      required:
+        - position_address
+      properties:
+        position_address:
+          type: string
+          description: Stonfi farm position address
+          example: EQDY6PMeMbQSz7dltNN4RRTIxyuBJX4dQESOy8cWR2tUgBxH
+    ApiYieldInteractionRequest:
+      type: object
+      required:
+        - request_data
+      properties:
+        request_data:
+          # TODO: extend this object with ApiYieldInteractionRequest_<Type>
+          oneOf:
+            - $ref: '#/components/schemas/ApiDexPoolLiquidityProvisioningRequest'
+            - $ref: '#/components/schemas/ApiDexPoolLiquidityWithdrawalRequest'
+            - $ref: '#/components/schemas/ApiStonfiFarmRequest'
+            - $ref: '#/components/schemas/ApiYieldInteractionRequest_DexStonfiWithdrawFromStaking'
+          discriminator:
+            propertyName: 'yieldTypeResolver'
+            mapping:
+              dex_provide_liquidity: '#/components/schemas/ApiDexPoolLiquidityProvisioningRequest'
+              dex_withdraw_liquidity: '#/components/schemas/ApiDexPoolLiquidityWithdrawalRequest'
+              dex_stonfi_lock_staking: '#/components/schemas/ApiStonfiFarmRequest'
+              dex_stonfi_withdraw_staking: '#/components/schemas/ApiYieldInteractionRequest_DexStonfiWithdrawFromStaking'
