@@ -7,15 +7,30 @@ and seeking partners interested in integrating with us. Upon integration, you wi
 2. Access to thousands of new users who use the swap.coffee platform daily.
 3. A significant increase in Total Value Locked (TVL) for your protocol.
 
-## Get started
+## How to integrate your protocol with swap.coffee
 
-1. Install a JetBrains IDE. The Community version is sufficient.
-2. Clone the project:
-   ```bash
-   git clone <url>
-    ```
-3. Open the project in IntelliJ IDEA and wait for the IDE to download dependencies.
-4. Run the `Application.kt`.
+1. **Fork** the project and **clone** it. If you prefer, you can create a private project. In that case, add the dev
+   team to your repository: `@glcanvas` and `@RinesThaix`.
+2. Create a new branch in your repo called `integration/<your-protocol-name>`.
+3. **Implement** and **test** the required classes (see below).
+4. Submit a merge request and **assign** it to the dev team.
+5. **Notify** one of the admins from the Telegram chat: https://t.me/swapcoffee_dev_chat about your merge request.
+6. We will **review** your request as soon as possible.
+
+## How to run the application locally
+
+1. Download and install a JetBrains IDE (the Community version is enough).
+2. Open the project in IntelliJ IDEA and let the IDE download the dependencies.
+3. Build the containers from `docker-compose.yml`.
+4. Launch the `Application.kt`.
+5. The Swagger UI is available at http://localhost:8080/swagger-ui.
+
+## To integrate your protocol with swap.coffee, please follow these steps:
+
+1. Define the objects used in GET and POST requests and internal data classes.
+2. Create a service to load pool data, trading statistics, and other information.
+3. Develop a service that responds to REST API queries and integrate it with `YieldService`.
+4. Implement a tracking process to monitor transactions.
 
 ## Project structure
 
@@ -43,15 +58,6 @@ The `YieldService` is a critical component of the system. All API queries are se
 The `YieldService` retrieves data from various protocol sources, fetches boosts and metrics, and responds to user search
 queries, handling all user requests.
 
-## Integration Process Overview
-
-To integrate your protocol with swap.coffee, follow these steps:
-
-1. Define the objects used in GET and POST requests, and internal data classes.
-2. Create a service to load pool data, trading statistics, boost information, and more.
-3. Develop a service that responds to front-end queries, integrate this service into `YieldService`.
-4. Implement a tracing process to track transactions.
-
 ### GET and POST Request Objects, and internal data classes
 
 The `YieldService` exposes the following four endpoints:
@@ -73,7 +79,7 @@ The `YieldService` exposes the following four endpoints:
 
 These endpoints located in the `yield-spec.yaml`. Go through the file and add resolve all `TODO`.
 Please, note:
-The `YieldSearchResponseApi`, `YieldUserDetailApi`, and `InteractionRequestApi` objects use a `oneOf` structure, where
+`YieldSearchResponseApi`, `YieldUserDetailApi`, and `InteractionRequestApi` objects use a `oneOf` structure, where
 resolution is based on the `yieldTypeResolver` field. **Do not use the `yieldTypeResolver` field in your own objects**,
 as it is
 reserved for the system.
@@ -101,9 +107,9 @@ To load new pools and calculate trading metrics, you have two options:
 
 Once new pools are fetched, they must be stored in the database. Refer to `StonfiV1LoaderService` for more information.
 
-### Creating a Front-End Service
+### Creating a REST API Service
 
-Create a custom service, such as `YourProtocolNameService`, to respond to front-end requests. This service should:
+Create a custom service, such as `YourProtocolNameService`, to respond to REST API requests. This service should:
 
 - **Return Detailed Pool Information**: Since `LoaderService` updates periodically, it cannot provide real-time data
   like `total_supply` and `reserve_ratio`. Your service should fetch and return the latest data for users.
@@ -148,3 +154,24 @@ At the end of the process, you need to:
    pool and user data.
 4. Update the `YieldService` to support your new service.
 5. Create handlers to monitor transactions using the `StatusHandler` class.
+
+## FAQ
+
+### We have no experience with Kotlin.
+
+That's okay.
+Kotlin is very similar to TypeScript and has a rich documentation: https://kotlinlang.org/docs/home.html.
+Additionally, we have written an example of integration with Stone.fi V1 that you can refer to.
+If you have any questions, please feel free to ask them here: https://t.me/swapcoffee_dev_chat.
+
+### Does the code need to be compiled?
+
+Yes, it does.
+
+### Do we need to write tests?
+
+Not necessarily, but we recommend that you launch your code and test it by making REST API requests.
+
+### Where can I find answers to my questions?
+
+You can ask any questions at: https://t.me/swapcoffee_dev_chat.
