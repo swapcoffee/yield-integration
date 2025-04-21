@@ -16,7 +16,7 @@ and seeking partners interested in integrating with us. Upon integration, you wi
 4. Submit a merge request and assign it to the dev team.
 5. Notify one of the admins from the Telegram chat: https://t.me/swapcoffee_dev_chat about your merge request.
 6. We will review your request. If there are any issues, we will comment on them in the pull request. You will need to resolve them.
-7. After that, your protocol will appear on the [Yearn page](https://swap.coffee/earn).
+7. After that, your protocol will appear on the [Earn page](https://swap.coffee/earn).
 
 ## How to run the application locally
 
