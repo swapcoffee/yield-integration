@@ -314,6 +314,7 @@ components:
         - curve_fi_stable
         - concentrated_v3
         - tonstakers
+        - farmix_lending
     ApiPoolFees:
       type: object
       required:
@@ -546,6 +547,7 @@ components:
         - coffee
         - tonco
         - tonstakers
+        - farmixlending
     ApiPoolStatistics:
       type: object
       required:
