@@ -546,6 +546,7 @@ components:
         - coffee
         - tonco
         - tonstakers
+        - stormtrade
     ApiPoolStatistics:
       type: object
       required:
@@ -624,6 +625,32 @@ components:
 
 
     # TODO: Add new object, ApiYieldSearch_<Type> here
+    ApiYieldSearch_StormTrade:
+      type: object
+      required:
+        - vault_address
+        - asset
+        - asset_name
+        - protocol
+      properties:
+        vault_address:
+          type: string
+          description: StormTrade vault address
+        asset:
+          $ref: '#/components/schemas/ApiToken'
+        asset_name:
+          type: string
+          example: TON
+        protocol:
+          type: string
+          example: stormtrade
+        decimals:
+          type: integer
+          format: int32
+        lp_jetton_master:
+          type: string
+          description: LP jetton master address for this vault
+    
     ApiYieldSearchWrapper:
       type: object
       required:
@@ -636,10 +663,12 @@ components:
           # TODO: extend this object with ApiYieldSearch_<Type>
           oneOf:
             - $ref: '#/components/schemas/ApiPool'
+            - $ref: '#/components/schemas/ApiYieldSearch_StormTrade'
           discriminator:
             propertyName: 'yieldTypeResolver'
             mapping:
               dex_pool: '#/components/schemas/ApiPool'
+              stormtrade_vault: '#/components/schemas/ApiYieldSearch_StormTrade'
     ApiYieldSearchResponse:
       type: object
       required:
@@ -671,6 +700,36 @@ components:
         total_supply:
           type: string
           description: Absolute value of total minted LP for this pool
+    
+    ApiYieldDetails_StormTrade:
+      type: object
+      required:
+        - vault
+        - total_supply
+        - locked_balance
+        - free_balance
+      properties:
+        vault:
+          $ref: '#/components/schemas/ApiYieldSearch_StormTrade'
+        total_supply:
+          type: string
+          description: Total supply of assets in vault
+        locked_balance:
+          type: string
+          description: Locked balance in vault
+        free_balance:
+          type: string
+          description: Free balance available for trading
+        apr_week:
+          type: string
+          description: Weekly APR
+        apr_month:
+          type: string
+          description: Monthly APR
+        apr_year:
+          type: string
+          description: Yearly APR
+    
     ApiYieldDetails:
       type: object
       required:
@@ -683,10 +742,12 @@ components:
           # TODO: extend this object with ApiYieldDetails_<Type>, don't forget to update discriminator
           oneOf:
             - $ref: '#/components/schemas/ApiYieldDetails_Dex'
+            - $ref: '#/components/schemas/ApiYieldDetails_StormTrade'
           discriminator:
             propertyName: 'yieldTypeResolver'
             mapping:
               dex_pool: '#/components/schemas/ApiYieldDetails_Dex'
+              stormtrade_vault: '#/components/schemas/ApiYieldDetails_StormTrade'
 
     # TODO: Add new object, ApiYieldUserDetails_<Type> here
     ApiYieldUserDetails_Dex:
@@ -707,6 +768,27 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ApiClaimingTokenStats'
+    
+    ApiYieldUserDetails_StormTrade:
+      type: object
+      required:
+        - user_supplied_amount
+        - vault_address
+        - average_rate
+      properties:
+        user_supplied_amount:
+          type: string
+          description: Amount of assets user has supplied to vault
+        vault_address:
+          type: string
+          description: StormTrade vault address
+        average_rate:
+          type: string
+          description: User's average supply rate
+        user_lp_wallet:
+          type: string
+          description: User's LP jetton wallet address (for withdrawals)
+    
     ApiYieldUserDetails:
       type: object
       required:
@@ -716,10 +798,12 @@ components:
           # TODO: extend this object with ApiYieldUserDetails_<Type>, don't forget to update discriminator
           oneOf:
             - $ref: '#/components/schemas/ApiYieldUserDetails_Dex'
+            - $ref: '#/components/schemas/ApiYieldUserDetails_StormTrade'
           discriminator:
             propertyName: 'yieldTypeResolver'
             mapping:
               dex_pool: '#/components/schemas/ApiYieldUserDetails_Dex'
+              stormtrade_vault: '#/components/schemas/ApiYieldUserDetails_StormTrade'
 
     # TODO: Add new object, ApiYieldInteractionRequest_<Type> here
     ApiYieldInteractionRequest_DexStonfiWithdrawFromStaking:
@@ -731,6 +815,27 @@ components:
           type: string
           description: Stonfi farm position address
           example: EQDY6PMeMbQSz7dltNN4RRTIxyuBJX4dQESOy8cWR2tUgBxH
+    
+    ApiYieldInteractionRequest_StormTradeProvide:
+      type: object
+      required:
+        - amount
+      properties:
+        amount:
+          type: string
+          description: Amount of asset to provide to vault (absolute value)
+          example: "1000000000"
+    
+    ApiYieldInteractionRequest_StormTradeWithdraw:
+      type: object
+      required:
+        - lp_amount
+      properties:
+        lp_amount:
+          type: string
+          description: Amount of LP tokens to withdraw (absolute value)
+          example: "1000000000"
+    
     ApiYieldInteractionRequest:
       type: object
       required:
@@ -743,6 +848,8 @@ components:
             - $ref: '#/components/schemas/ApiDexPoolLiquidityWithdrawalRequest'
             - $ref: '#/components/schemas/ApiStonfiFarmRequest'
             - $ref: '#/components/schemas/ApiYieldInteractionRequest_DexStonfiWithdrawFromStaking'
+            - $ref: '#/components/schemas/ApiYieldInteractionRequest_StormTradeProvide'
+            - $ref: '#/components/schemas/ApiYieldInteractionRequest_StormTradeWithdraw'
           discriminator:
             propertyName: 'yieldTypeResolver'
             mapping:
@@ -750,3 +857,5 @@ components:
               dex_withdraw_liquidity: '#/components/schemas/ApiDexPoolLiquidityWithdrawalRequest'
               dex_stonfi_lock_staking: '#/components/schemas/ApiStonfiFarmRequest'
               dex_stonfi_withdraw_staking: '#/components/schemas/ApiYieldInteractionRequest_DexStonfiWithdrawFromStaking'
+              stormtrade_provide_liquidity: '#/components/schemas/ApiYieldInteractionRequest_StormTradeProvide'
+              stormtrade_withdraw_liquidity: '#/components/schemas/ApiYieldInteractionRequest_StormTradeWithdraw'
