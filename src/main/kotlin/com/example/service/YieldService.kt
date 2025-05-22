@@ -1,5 +1,6 @@
 package com.example.service
 
+import FarmixLendingService
 import com.example.api.model.*
 import com.example.dto.yield.*
 import com.example.protocols.stonfi.StonfiV1Service
@@ -19,7 +20,8 @@ class YieldService(
     private val yieldBoostsService: YieldBoostsService,
     private val yieldTradingStatisticsService: YieldTradingStatisticsService,
     private val tokenService: TokenService,
-    private val stonfiV1Service: StonfiV1Service
+    private val stonfiV1Service: StonfiV1Service,
+    private val farmixLendingService: FarmixLendingService,
     // TODO: add you service here, like stonfiV1Service
 ) {
 
@@ -95,9 +97,29 @@ class YieldService(
                 )
                 ApiYieldSearchWrapper(stat, mapper(poolHolder))
             }
+
+        val farmixLendingPositions = if (protocols.contains(YieldProtocols.FARMIX_V1_LENDING)) {
+            farmixLendingService.getUserPositions(userAddress).associateBy { it.first }
+        } else {
+            emptyMap()
+        }.filter { it.key in pools.keys }
+            .mapNotNull { (poolAddress, balance) ->
+                val poolHolder = pools[poolAddress] ?: return@mapNotNull null
+                val stat = ApiPoolStatistics(
+                    poolHolder.stat.tvlUsd,
+                    balance.second,
+                    0.0,
+                    poolHolder.stat.apr,
+                    poolHolder.stat.lpApr,
+                    poolHolder.stat.boostApr
+                )
+                ApiYieldSearchWrapper(stat, mapper(poolHolder))
+            }
+
         // TODO: implement interaction with your protocol in a same way
         //  implement `getUserPositions` as you wish, you may pass any arguments here
         userPositions.addAll(stonfiPositions)
+        userPositions.addAll(farmixLendingPositions)
 
         return userPositions
     }
@@ -149,6 +171,15 @@ class YieldService(
                 )
             }
 
+            is YieldPoolFieldsFarmixLending -> {
+                val poolInfo = mapper(item) as ApiPool
+                ApiYieldDetailsDex(
+                    poolInfo,
+                    emptyList<ApiBoost>(),
+                    farmixLendingService.getTotalSupply(item.poolAddress)
+                )
+            }
+
             else -> TODO("When you implement new YieldPoolFields_<Protocol>, add it here, and provide latest data to user")
         }
     }
@@ -166,6 +197,15 @@ class YieldService(
                 ApiYieldUserDetailsDex(
                     userData.first, // user's lp amount
                     userData.second, // user's jetton wallet
+                    emptyList() // boosts
+                )
+            )
+        } else if (poolHolder.protocol == YieldProtocols.FARMIX_V1_LENDING) {
+            val userData = farmixLendingService.getUserPosition(poolAddress, userAddress)
+            ApiYieldUserDetails(
+                ApiYieldUserDetailsDex(
+                    userData.second, // user's lp amount
+                    userData.first, // user's jetton wallet
                     emptyList() // boosts
                 )
             )
@@ -245,6 +285,19 @@ class YieldService(
                 null
             )
 
+            is YieldPoolFieldsFarmixLending -> ApiPool(
+                item.protocol.value,
+                item.poolAddress,
+                ApiPoolType.PUBLIC,
+                ApiAmmType.FARMIX_LENDING,
+                listOf(tokenService.toApiModel(it.underlyingAsset)),
+                listOf(0.0, 0.0),
+                ApiPoolFees(0.0),
+                null,
+                null,
+                null
+            )
+
             else -> TODO("Implement your YieldPoolFields, which returns main info about your pool")
         }
     }
@@ -256,6 +309,4 @@ class YieldService(
         val boosts: List<YieldBoost>,
         val stat: YieldTradingStatistics
     )
-
-
 }
