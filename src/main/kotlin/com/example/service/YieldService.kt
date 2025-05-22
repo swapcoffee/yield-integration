@@ -3,7 +3,9 @@ package com.example.service
 import com.example.api.model.*
 import com.example.dto.yield.*
 import com.example.protocols.stonfi.StonfiV1Service
+import com.example.protocols.stormtrade.StormTradeService
 import com.example.repository.PoolsRepository
+import com.example.service.ConversionServiceStub
 import com.example.utils.ObjectMappers
 import com.example.utils.getLogger
 import kotlinx.coroutines.runBlocking
@@ -19,7 +21,9 @@ class YieldService(
     private val yieldBoostsService: YieldBoostsService,
     private val yieldTradingStatisticsService: YieldTradingStatisticsService,
     private val tokenService: TokenService,
-    private val stonfiV1Service: StonfiV1Service
+    private val stonfiV1Service: StonfiV1Service,
+    private val stormTradeService: StormTradeService,
+    private val conversionService: ConversionServiceStub
     // TODO: add you service here, like stonfiV1Service
 ) {
 
@@ -95,9 +99,32 @@ class YieldService(
                 )
                 ApiYieldSearchWrapper(stat, mapper(poolHolder))
             }
+        // StormTrade positions
+        val stormTradePositions = if (protocols.contains(YieldProtocols.STORMTRADE)) {
+            stormTradeService.getUserPositions(userAddress).map { (vaultAddress, position) ->
+                val poolHolder = pools[vaultAddress] ?: return@map null
+                val suppliedUsd = conversionService.getUsdAmount(
+                    vaultAddress, 
+                    position.supplied.toDoubleOrNull() ?: 0.0
+                )
+                val stat = ApiPoolStatistics(
+                    poolHolder.stat.tvlUsd,
+                    suppliedUsd,
+                    0.0,
+                    poolHolder.stat.apr,
+                    poolHolder.stat.lpApr,
+                    poolHolder.stat.boostApr
+                )
+                ApiYieldSearchWrapper(stat, mapper(poolHolder))
+            }.filterNotNull()
+        } else {
+            emptyList()
+        }
+        
         // TODO: implement interaction with your protocol in a same way
         //  implement `getUserPositions` as you wish, you may pass any arguments here
         userPositions.addAll(stonfiPositions)
+        userPositions.addAll(stormTradePositions)
 
         return userPositions
     }
@@ -148,6 +175,19 @@ class YieldService(
                     stonfiV1Service.getTotalSupply(item.poolAddress)
                 )
             }
+            
+            is YieldPoolFieldsStormTrade -> {
+                val vault = stormTradeService.getVault(item.poolAddress)
+                ApiYieldDetailsStormTrade(
+                    vault = mapper(item) as ApiYieldSearchStormTrade,
+                    totalSupply = stormTradeService.getTotalSupply(item.poolAddress),
+                    lockedBalance = vault?.lockedBalance ?: "0",
+                    freeBalance = vault?.freeBalance ?: "0",
+                    aprWeek = vault?.apr?.week,
+                    aprMonth = vault?.apr?.month,
+                    aprYear = vault?.apr?.year
+                )
+            }
 
             else -> TODO("When you implement new YieldPoolFields_<Protocol>, add it here, and provide latest data to user")
         }
@@ -160,18 +200,45 @@ class YieldService(
         val pools = pools ?: throw NullPointerException("Not found pool: $poolAddress")
         val poolHolder = pools[poolAddress] ?: throw NullPointerException("Not found pool: $poolAddress")
 
-        return if (poolHolder.protocol == YieldProtocols.STONFI_V1) {
-            val userData = stonfiV1Service.getUserPosition(poolAddress, userAddress)
-            ApiYieldUserDetails(
-                ApiYieldUserDetailsDex(
-                    userData.first, // user's lp amount
-                    userData.second, // user's jetton wallet
-                    emptyList() // boosts
+        return when (poolHolder.protocol) {
+            YieldProtocols.STONFI_V1 -> {
+                val userData = stonfiV1Service.getUserPosition(poolAddress, userAddress)
+                ApiYieldUserDetails(
+                    ApiYieldUserDetailsDex(
+                        userData.first, // user's lp amount
+                        userData.second, // user's jetton wallet
+                        emptyList() // boosts
+                    )
                 )
-            )
-        } else {
-            // TODO: call yourProtocolService.getUserPosition, which may return any data, which will be mapped into ApiYieldUserDetails
-            TODO("Implement me")
+            }
+            
+            YieldProtocols.STORMTRADE -> {
+                val position = stormTradeService.getUserPosition(poolAddress, userAddress)
+                val vault = stormTradeService.getVault(poolAddress)
+                val userLpWallet = if (position != null && vault != null) {
+                    try {
+                        stormTradeService.getUserJettonWalletAddress(vault.config.lpJettonMaster, userAddress)
+                    } catch (e: Exception) {
+                        poolAddress // fallback to vault address
+                    }
+                } else {
+                    poolAddress
+                }
+                
+                ApiYieldUserDetails(
+                    ApiYieldUserDetailsStormTrade(
+                        userSuppliedAmount = position?.supplied ?: "0",
+                        vaultAddress = poolAddress,
+                        averageRate = position?.averageRate ?: "0",
+                        userLpWallet = userLpWallet
+                    )
+                )
+            }
+            
+            else -> {
+                // TODO: call yourProtocolService.getUserPosition, which may return any data, which will be mapped into ApiYieldUserDetails
+                TODO("Implement me")
+            }
         }
     }
 
@@ -187,31 +254,74 @@ class YieldService(
         val pools = pools ?: throw NullPointerException("Not found pool: $poolAddress")
         val poolHolder = pools[poolAddress] ?: throw NullPointerException("Not found pool: $poolAddress")
 
-        return if (poolHolder.protocol == YieldProtocols.STONFI_V1) {
-            when (request) {
-                is ApiDexPoolLiquidityWithdrawalRequest -> listOf(
-                    stonfiV1Service.closeUserPosition(
-                        poolAddress,
-                        userAddress,
-                        request.lpAmount.toBigInteger()
+        return when (poolHolder.protocol) {
+            YieldProtocols.STONFI_V1 -> {
+                when (request) {
+                    is ApiDexPoolLiquidityWithdrawalRequest -> listOf(
+                        stonfiV1Service.closeUserPosition(
+                            poolAddress,
+                            userAddress,
+                            request.lpAmount.toBigInteger()
+                        )
                     )
-                )
 
-                is ApiDexPoolLiquidityProvisioningRequest -> TODO("Not needed in this example")
-                is ApiStonfiFarmRequest -> TODO("Not needed in this example")
-                is ApiYieldInteractionRequestDexStonfiWithdrawFromStaking -> TODO("Not needed in this example")
-                else -> throw IllegalArgumentException("Unsupported operation")
-            }
-        } else {
-            // TODO if this pool is from your protocol consider to add when(request) like this:
-            /*
-                when(request) {
-                    is YourApiPostRequestCommand1 -> yourProtocolService.buildTransactionForCommand1(poolAddress, userAddress, request)
-                    is YourApiPostRequestCommand2 -> yourProtocolService.buildTransactionForCommand2(poolAddress, userAddress, request)
+                    is ApiDexPoolLiquidityProvisioningRequest -> TODO("Not needed in this example")
+                    is ApiStonfiFarmRequest -> TODO("Not needed in this example")
+                    is ApiYieldInteractionRequestDexStonfiWithdrawFromStaking -> TODO("Not needed in this example")
                     else -> throw IllegalArgumentException("Unsupported operation")
                 }
-            */
-            TODO("Implement me")
+            }
+            
+            YieldProtocols.STORMTRADE -> {
+                when (request) {
+                    is ApiYieldInteractionRequestStormTradeWithdraw -> listOf(
+                        stormTradeService.withdrawLiquidity(
+                            poolAddress,
+                            userAddress,
+                            request.lpAmount.toBigInteger()
+                        )
+                    )
+                    
+                    is ApiYieldInteractionRequestStormTradeProvide -> listOf(
+                        stormTradeService.provideLiquidity(
+                            poolAddress,
+                            userAddress,
+                            request.amount.toBigInteger()
+                        )
+                    )
+                    
+                    // Keep backward compatibility with DEX requests for migration period
+                    is ApiDexPoolLiquidityWithdrawalRequest -> listOf(
+                        stormTradeService.withdrawLiquidity(
+                            poolAddress,
+                            userAddress,
+                            request.lpAmount.toBigInteger()
+                        )
+                    )
+                    
+                    is ApiDexPoolLiquidityProvisioningRequest -> listOf(
+                        stormTradeService.provideLiquidity(
+                            poolAddress,
+                            userAddress,
+                            request.asset1Amount.toBigInteger()
+                        )
+                    )
+                    
+                    else -> throw IllegalArgumentException("Unsupported operation for StormTrade: ${request::class.simpleName}")
+                }
+            }
+            
+            else -> {
+                // TODO if this pool is from your protocol consider to add when(request) like this:
+                /*
+                    when(request) {
+                        is YourApiPostRequestCommand1 -> yourProtocolService.buildTransactionForCommand1(poolAddress, userAddress, request)
+                        is YourApiPostRequestCommand2 -> yourProtocolService.buildTransactionForCommand2(poolAddress, userAddress, request)
+                        else -> throw IllegalArgumentException("Unsupported operation")
+                    }
+                */
+                TODO("Implement me")
+            }
         }
 
     }
@@ -243,6 +353,15 @@ class YieldService(
                 null,
                 null,
                 null
+            )
+            
+            is YieldPoolFieldsStormTrade -> ApiYieldSearchStormTrade(
+                vaultAddress = item.poolAddress,
+                asset = tokenService.toApiModel(it.asset),
+                assetName = it.assetName,
+                protocol = item.protocol.value,
+                decimals = it.decimals,
+                lpJettonMaster = it.lpJettonMaster
             )
 
             else -> TODO("Implement your YieldPoolFields, which returns main info about your pool")

@@ -4,7 +4,8 @@ import com.example.api.model.ApiSupportedYields
 
 // TODO: add your protocol here
 enum class YieldProtocols(val value: String) {
-    STONFI_V1("stonfi_v1");
+    STONFI_V1("stonfi_v1"),
+    STORMTRADE("stormtrade");
 
     companion object {
         fun resolve(it: String): YieldProtocols {
@@ -21,6 +22,7 @@ enum class YieldProtocols(val value: String) {
 fun YieldProtocols.mapToApi(): ApiSupportedYields {
     when (this) {
         YieldProtocols.STONFI_V1 -> return ApiSupportedYields.STONFI
+        YieldProtocols.STORMTRADE -> return ApiSupportedYields.STORMTRADE
         else -> throw IllegalArgumentException("Unsupported Yield Protocol: $this")
     }
 }
@@ -28,6 +30,7 @@ fun YieldProtocols.mapToApi(): ApiSupportedYields {
 fun ApiSupportedYields.mapToYieldProtocols(): YieldProtocols {
     when (this) {
         ApiSupportedYields.STONFI -> return YieldProtocols.STONFI_V1
+        ApiSupportedYields.STORMTRADE -> return YieldProtocols.STORMTRADE
         else -> throw IllegalArgumentException("Unsupported Yield Protocol: $this")
     }
 }
